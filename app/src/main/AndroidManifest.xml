@@ -8,17 +8,15 @@
     <application
         android:name=".ScreenStreamApp"
         android:allowBackup="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:enableOnBackInvokedCallback="true"
+        android:dataExtractionRules="@xml/backup_rules_api31"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:largeHeap="true"
-        android:resizeableActivity="true"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.ScreenStream.Starting"
-        tools:targetApi="34">
+        android:theme="@style/Theme.App.DayNight"
+        tools:targetApi="tiramisu">
 
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
@@ -34,29 +32,16 @@
             android:value="true" />
 
         <activity
-            android:name="info.dvkr.screenstream.SingleActivity"
+            android:name=".activity.AppActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize">
-            <layout
-                android:minWidth="320dp"
-                android:minHeight="320dp" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <service
-            android:name="info.dvkr.screenstream.tile.TileActionService"
-            android:exported="true"
-            android:icon="@drawable/ic_tile_24dp"
-            android:label="@string/app_name"
-            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
-            <intent-filter>
-                <action android:name="android.service.quicksettings.action.QS_TILE" />
-            </intent-filter>
-        </service>
 
         <service
             android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"

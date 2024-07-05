@@ -1,18 +1,21 @@
+@Suppress("DSL_SCOPE_VIOLATION") // TODO: Remove once KTIJ-19369 is fixed
 plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinAndroid)
-    alias(libs.plugins.kotlinParcelize)
-    alias(libs.plugins.compose)
     alias(libs.plugins.ksp)
 }
 
 android {
     namespace = "info.dvkr.screenstream.common"
-    compileSdk = rootProject.extra["compileSdkVersion"] as Int
-    buildToolsVersion = rootProject.extra["buildToolsVersion"] as String
+    compileSdk = 34
+    buildToolsVersion = "34.0.0"
 
     defaultConfig {
-        minSdk = rootProject.extra["minSdkVersion"] as Int
+        minSdk = 23
+    }
+
+    buildFeatures {
+        viewBinding = true
     }
 
     compileOptions {
@@ -24,35 +27,31 @@ android {
         jvmTarget = JavaVersion.VERSION_11.toString()
         freeCompilerArgs += "-Xexplicit-api=strict"
     }
-
-    composeCompiler {
-        enableStrongSkippingMode = true
-    }
 }
 
 dependencies {
+    api(libs.kotlinx.coroutines.core)
     api(libs.kotlinx.coroutines.android)
 
-    api(libs.androidx.core.ktx)
-    api(libs.androidx.activity.compose)
-    api(libs.androidx.appcompat)
-    api(libs.androidx.lifecycle.runtime.compose)
-    api(libs.androidx.window)
-    api(libs.androidx.datastore.preferences)
-
-    api(platform(libs.androidx.compose.bom))
-    api(libs.androidx.compose.ui)
-//    api(libs.androidx.compose.material3)
-    api(libs.androidx.compose.material3.window)
-    api("androidx.compose.foundation:foundation:1.7.0-beta04")
-    api("androidx.compose.material3:material3:1.3.0-beta04")
-
-    api(libs.koin.android.compose)
+    api(libs.koin.android)
     api(libs.koin.annotations)
     ksp(libs.koin.ksp)
 
-    api(libs.xlog)
+    api(libs.androidx.core.ktx)
+    api(libs.androidx.activity.ktx)
+    api(libs.androidx.fragment.ktx)
+    api(libs.androidx.lifecycle.runtime.ktx)
+    api(libs.androidx.appcompat)
+    api(libs.androidx.recyclerview)
+    api(libs.androidx.window)
+    api(libs.androidx.constraintlayout)
+    api(libs.androidx.datastore.preferences)
+    api(libs.material)
 
-//    api(libs.androidx.compose.ui.tooling.preview)
-//    debugApi(libs.androidx.compose.ui.tooling)
+    api(libs.material.dialogs.core)
+    api(libs.material.dialogs.color)
+    api(libs.material.dialogs.input)
+    api(libs.material.dialogs.lifecycle)
+
+    api(libs.xlog)
 }

@@ -5,71 +5,36 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.elvishew.xlog.XLog
-import info.dvkr.screenstream.common.getLog
 import info.dvkr.screenstream.common.module.StreamingModule
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.catch
+import info.dvkr.screenstream.common.getCatching
+import info.dvkr.screenstream.common.setValue
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Single
-import java.io.IOException
 
-@Single(createdAtStart = true)
-internal class AppSettingsImpl(context: Context) : AppSettings {
-
-    private val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
+@Single
+internal class PreferenceDataStoreProvider(private val context: Context) {
+    internal val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
         corruptionHandler = ReplaceFileCorruptionHandler { ex -> XLog.e(ex); emptyPreferences() },
-        produceFile = { context.preferencesDataStoreFile("app_settings") } // Sync name with backup config
+        produceFile = { context.preferencesDataStoreFile("app_settings") }
     )
+}
 
-    override val data: StateFlow<AppSettings.Data> = dataStore.data
-        .map { preferences -> preferences.toAppSettings() }
-        .catch { cause ->
-            XLog.e(this@AppSettingsImpl.getLog("getCatching"), cause)
-            if (cause is IOException) emit(AppSettings.Data()) else throw cause
-        }
-        .stateIn(
-            CoroutineScope(Dispatchers.IO),
-            SharingStarted.Eagerly,
-            AppSettings.Data()
-        )
+@Single
+internal class AppSettingsImpl(preferenceDataStoreProvider: PreferenceDataStoreProvider) : AppSettings {
 
-    override suspend fun updateData(transform: AppSettings.Data.() -> AppSettings.Data) = withContext(NonCancellable + Dispatchers.IO) {
-        dataStore.edit { preferences ->
-            val newSettings = transform.invoke(preferences.toAppSettings())
+    private val dataStore: DataStore<Preferences> = preferenceDataStoreProvider.dataStore
 
-            preferences.apply {
-                clear()
+    override val streamingModuleFlow: Flow<StreamingModule.Id> = dataStore.getCatching(AppSettings.Key.STREAMING_MODULE, AppSettings.Default.STREAMING_MODULE.value).map { StreamingModule.Id(it) }
+    override suspend fun setStreamingModule(value: StreamingModule.Id): Unit = dataStore.setValue(AppSettings.Key.STREAMING_MODULE, value.value)
 
-                if (newSettings.streamingModule.value != AppSettings.Default.STREAMING_MODULE.value)
-                    set(AppSettings.Key.STREAMING_MODULE, newSettings.streamingModule.value)
+    override val nightModeFlow: Flow<Int> = dataStore.getCatching(AppSettings.Key.NIGHT_MODE, AppSettings.Default.NIGHT_MODE)
+    override suspend fun setNightMode(value: Int): Unit = dataStore.setValue(AppSettings.Key.NIGHT_MODE, value)
 
-                if (newSettings.nightMode != AppSettings.Default.NIGHT_MODE)
-                    set(AppSettings.Key.NIGHT_MODE, newSettings.nightMode)
 
-                if (newSettings.dynamicTheme != AppSettings.Default.DYNAMIC_THEME)
-                    set(AppSettings.Key.DYNAMIC_THEME, newSettings.dynamicTheme)
-
-                if (newSettings.addTileAsked != AppSettings.Default.ADD_TILE_ASKED)
-                    set(AppSettings.Key.ADD_TILE_ASKED, newSettings.addTileAsked)
-            }
-        }
-        Unit
-    }
-
-    private fun Preferences.toAppSettings(): AppSettings.Data = AppSettings.Data(
-        streamingModule = StreamingModule.Id(this[AppSettings.Key.STREAMING_MODULE] ?: AppSettings.Default.STREAMING_MODULE.value),
-        nightMode = this[AppSettings.Key.NIGHT_MODE] ?: AppSettings.Default.NIGHT_MODE,
-        dynamicTheme = this[AppSettings.Key.DYNAMIC_THEME] ?: AppSettings.Default.DYNAMIC_THEME,
-        addTileAsked = this[AppSettings.Key.ADD_TILE_ASKED] ?: AppSettings.Default.ADD_TILE_ASKED,
-    )
+    override val lastUpdateRequestMillisFlow: Flow<Long> = dataStore.getCatching(AppSettings.Key.LAST_UPDATE_REQUEST_MILLIS, AppSettings.Default.LAST_IAU_REQUEST_TIMESTAMP)
+    override suspend fun setLastUpdateRequestMillis(value: Long): Unit = dataStore.setValue(AppSettings.Key.LAST_UPDATE_REQUEST_MILLIS, value)
 }

@@ -1,18 +1,27 @@
+@Suppress("DSL_SCOPE_VIOLATION") // TODO: Remove once KTIJ-19369 is fixed
 plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.kotlinParcelize)
-    alias(libs.plugins.compose)
     alias(libs.plugins.ksp)
 }
 
 android {
     namespace = "info.dvkr.screenstream.mjpeg"
-    compileSdk = rootProject.extra["compileSdkVersion"] as Int
-    buildToolsVersion = rootProject.extra["buildToolsVersion"] as String
+    compileSdk = 34
+    buildToolsVersion = "34.0.0"
 
     defaultConfig {
-        minSdk = rootProject.extra["minSdkVersion"] as Int
+        minSdk = 23
+    }
+
+    buildFeatures {
+        buildConfig = true
+        viewBinding = true
+    }
+
+    androidResources {
+        ignoreAssetsPattern = "!dev"
     }
 
     compileOptions {
@@ -24,20 +33,15 @@ android {
         jvmTarget = JavaVersion.VERSION_11.toString()
         freeCompilerArgs += "-Xexplicit-api=strict"
     }
-
-    androidResources {
-        ignoreAssetsPattern = "!dev"
-    }
-
-    composeCompiler {
-        enableStrongSkippingMode = true
-    }
 }
 
 dependencies {
     implementation(project(":common"))
 
     ksp(libs.koin.ksp)
+
+    // Temp fix for https://github.com/afollestad/material-dialogs/issues/1825
+    compileOnly(fileTree("libs/bottomsheets-release.aar"))
 
     implementation(libs.ktor.server.cio)
     implementation(libs.ktor.server.compression)
@@ -46,8 +50,4 @@ dependencies {
     implementation(libs.ktor.server.forwarded.header)
     implementation(libs.ktor.server.websockets)
     implementation(libs.ktor.server.status.pages)
-}
-
-configurations.all {
-    exclude("org.fusesource.jansi", "jansi")
 }

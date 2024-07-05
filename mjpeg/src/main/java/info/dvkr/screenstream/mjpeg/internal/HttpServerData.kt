@@ -4,8 +4,7 @@ import android.util.Base64
 import com.elvishew.xlog.XLog
 import info.dvkr.screenstream.common.getLog
 import info.dvkr.screenstream.common.randomString
-import info.dvkr.screenstream.mjpeg.settings.MjpegSettings
-import info.dvkr.screenstream.mjpeg.ui.MjpegState
+import info.dvkr.screenstream.mjpeg.MjpegSettings
 import io.ktor.server.plugins.origin
 import io.ktor.server.request.ApplicationRequest
 import io.ktor.websocket.DefaultWebSocketSession
@@ -15,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
@@ -120,17 +120,27 @@ internal class HttpServerData(private val sendEvent: (MjpegEvent) -> Unit) {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
             other as Client
-            return id == other.id
+            if (id != other.id) return false
+            return true
         }
 
         override fun hashCode(): Int = id.hashCode()
     }
 
-    @Volatile internal var enablePin: Boolean = false
-    @Volatile internal var pin: String = ""
-    @Volatile internal var blockAddress: Boolean = false
-    @Volatile internal var streamAddress: String = ""
-    @Volatile internal var jpegFallbackAddress: String = ""
+    @Volatile
+    internal var enablePin: Boolean = false
+
+    @Volatile
+    internal var pin: String = ""
+
+    @Volatile
+    internal var blockAddress: Boolean = false
+
+    @Volatile
+    internal var streamAddress: String = ""
+
+    @Volatile
+    internal var jpegFallbackAddress: String = ""
 
     private val statisticScope = CoroutineScope(Job() + Dispatchers.Default)
     private val clients = ConcurrentHashMap<String, Client>()
@@ -140,12 +150,12 @@ internal class HttpServerData(private val sendEvent: (MjpegEvent) -> Unit) {
         repeat(TRAFFIC_HISTORY_SECONDS) { i -> it.addLast(MjpegState.TrafficPoint(i * 1000 + past, 0f)) }
     }
 
-    internal fun configure(mjpegSettings: MjpegSettings) {
+    internal suspend fun configure(mjpegSettings: MjpegSettings) {
         XLog.d(getLog("configure"))
 
-        enablePin = mjpegSettings.data.value.enablePin
-        pin = mjpegSettings.data.value.pin
-        blockAddress = mjpegSettings.data.value.blockAddress
+        enablePin = mjpegSettings.enablePinFlow.first()
+        pin = mjpegSettings.pinFlow.first()
+        blockAddress = mjpegSettings.blockAddressFlow.first()
         val streamAddressBase = if (enablePin) randomString(16) else "stream"
         streamAddress = "$streamAddressBase.mjpeg"
         jpegFallbackAddress = "$streamAddressBase.jpeg"
@@ -168,7 +178,7 @@ internal class HttpServerData(private val sendEvent: (MjpegEvent) -> Unit) {
                 trafficHistory.addLast(MjpegState.TrafficPoint(now, trafficAtNow))
                 sendEvent(MjpegStreamingService.InternalEvent.Traffic(now, trafficHistory.sortedBy { it.time }))
 
-                val clients = clientsList.flatMap { c -> c.toMjpegClients(blockedAddresses) }.sortedBy { it.address }
+                val clients = clientsList.flatMap { c -> c.toMjpegClients(blockedAddresses) }.sortedBy { it.clientAddress }
                 if (clients.size != publishedClients.size || clients.any { c ->
                         publishedClients.find { it.id == c.id }?.equals(c) != true
                     }) {

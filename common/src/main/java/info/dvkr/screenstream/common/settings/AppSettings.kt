@@ -1,40 +1,36 @@
 package info.dvkr.screenstream.common.settings
 
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.compose.runtime.Immutable
+import android.os.Build
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import info.dvkr.screenstream.common.module.StreamingModule
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.Flow
 
 public interface AppSettings {
 
     public object Key {
         public val STREAMING_MODULE: Preferences.Key<String> = stringPreferencesKey("STREAMING_MODULE")
         public val NIGHT_MODE: Preferences.Key<Int> = intPreferencesKey("NIGHT_MODE")
-        public val DYNAMIC_THEME: Preferences.Key<Boolean> = booleanPreferencesKey("DYNAMIC_THEME")
 
-        public val ADD_TILE_ASKED: Preferences.Key<Boolean> = booleanPreferencesKey("ADD_TILE_ASKED")
+        public val LAST_UPDATE_REQUEST_MILLIS: Preferences.Key<Long> = longPreferencesKey("LAST_UPDATE_REQUEST_MILLIS")
     }
 
     public object Default {
         public val STREAMING_MODULE: StreamingModule.Id = StreamingModule.Id("_NONE_")
-        public const val NIGHT_MODE: Int = AppCompatDelegate.MODE_NIGHT_UNSPECIFIED
-        public const val DYNAMIC_THEME: Boolean = true
+        public var NIGHT_MODE: Int = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) 3 else -1
 
-        public const val ADD_TILE_ASKED: Boolean = false
+        public const val LAST_IAU_REQUEST_TIMESTAMP: Long = 0L
     }
 
-    @Immutable
-    public data class Data(
-        public val streamingModule: StreamingModule.Id = Default.STREAMING_MODULE,
-        public val nightMode: Int = Default.NIGHT_MODE,
-        public val dynamicTheme: Boolean = Default.DYNAMIC_THEME,
-        public val addTileAsked: Boolean = Default.ADD_TILE_ASKED,
-    )
+    public val streamingModuleFlow: Flow<StreamingModule.Id>
+    public suspend fun setStreamingModule(value: StreamingModule.Id)
 
-    public val data: StateFlow<Data>
-    public suspend fun updateData(transform: Data.() -> Data)
+    public val nightModeFlow: Flow<Int>
+    public suspend fun setNightMode(value: Int)
+
+
+    public val lastUpdateRequestMillisFlow: Flow<Long>
+    public suspend fun setLastUpdateRequestMillis(value: Long)
 }

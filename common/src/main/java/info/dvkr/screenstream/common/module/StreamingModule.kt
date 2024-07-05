@@ -2,18 +2,14 @@ package info.dvkr.screenstream.common.module
 
 import android.content.Context
 import androidx.annotation.MainThread
-import androidx.annotation.StringRes
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
-import androidx.compose.ui.Modifier
-import info.dvkr.screenstream.common.ModuleSettings
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.LifecycleOwner
+import info.dvkr.screenstream.common.AppEvent
 import kotlinx.coroutines.flow.Flow
 import org.koin.core.scope.Scope
 
-@Immutable
 public interface StreamingModule {
 
-    @Immutable
     public data class Id(public val value: String)
 
     public sealed class State {
@@ -27,23 +23,19 @@ public interface StreamingModule {
 
     public val priority: Int
 
-    public val moduleSettings: ModuleSettings
-
     public val isRunning: Flow<Boolean>
 
-    public val isStreaming: Flow<Boolean>
+    @MainThread
+    public fun getName(context: Context): String
 
-    @get:StringRes
-    public val nameResource: Int
+    @MainThread
+    public fun getContentDescription(context: Context): String
 
-    @get:StringRes
-    public val descriptionResource: Int
+    @MainThread
+    public fun showDescriptionDialog(context: Context, lifecycleOwner: LifecycleOwner)
 
-    @get:StringRes
-    public val detailsResource: Int
-
-    @Composable
-    public fun StreamUIContent(modifier: Modifier)
+    @MainThread
+    public fun getFragmentClass(): Class<out Fragment>
 
     @MainThread
     public fun startModule(context: Context)
@@ -52,5 +44,5 @@ public interface StreamingModule {
     public suspend fun stopModule()
 
     @MainThread
-    public fun stopStream(reason: String)
+    public fun sendEvent(event: AppEvent)
 }
